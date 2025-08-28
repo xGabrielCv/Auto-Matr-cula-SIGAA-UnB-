@@ -30,7 +30,7 @@
 > **6. ALTERNATIVA DE BAIXO RISCO (APENAS MONITORAMENTO)**
 > - Se o objetivo é apenas receber alertas de vagas, sem efetivar matrícula, recomenda-se usar projetos que monitorem **apenas páginas públicas**.
 > - Essa abordagem **não requer login**, reduzindo significativamente o risco de violação de termos.
-> - [Projeto de Monitoramento Seguro](COLOQUE_O_LINK_DO_SEU_OUTRO_PROJETO_AQUI)
+> - [Projeto de Monitoramento Seguro](https://github.com/xGabrielCv/Monitorador-Vagas-SIGAA-Unb)
 
 
 ---
