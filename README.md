@@ -105,7 +105,7 @@ INTERVALO_POLL = 15   # Tempo entre verificações em segundos
 
 ### 🚀 Como Executar
 
-1.  Faça o download do script `auto_matricula.py`.
+1.  Faça o download do script `Script.py`.
 2.  Instale as dependências: `pip install selenium requests`.
 3.  Abra o arquivo e preencha o **Painel de Controle** com seus dados.
 4.  **Teste** o script com as configurações `DRY_RUN = True` e `HEADLESS = False` para assistir o robô em ação.
@@ -114,7 +114,7 @@ INTERVALO_POLL = 15   # Tempo entre verificações em segundos
     * `HEADLESS = True` (para rodar em segundo plano)
 6.  Abra um terminal na pasta do script e execute:
     ```bash
-    python auto_matricula.py
+    python Script.py
     ```
 
 ### 📋 Logging
