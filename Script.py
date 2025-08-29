@@ -124,7 +124,8 @@ Objetivo: Este script serve como **exercício educativo**.
 # ==================================================================
 
 
-# --- Configurações Técnicas  ---
+# --- Configurações Técnicas (REQUER ADAPTAÇÃO) ---
+# TODO: Adapte as URLs para a sua instituição.
 URL_LOGIN = "https://autenticacao.sua-universidade.edu.br/sso-server/login?service=https://sig.sua-universidade.edu.br/sigaa/login/cas"
 URL_PORTAL_DISCENTE = "https://sig.sua-universidade.edu.br/sigaa/portais/discente/discente.jsf"
 URL_MATRICULA_EXTRAORDINARIA = "https://sig.sua-universidade.edu.br/sigaa/graduacao/matricula/extraordinaria/matricula_extraordinaria.jsf"
@@ -233,6 +234,9 @@ def navegar_para_busca_turmas(driver: webdriver.Chrome) -> None:
         session_id = driver.find_element(By.NAME, "id").get_attribute("value")
         cookies = {c['name']: c['value'] for c in driver.get_cookies()}
         
+        # TODO: Este parâmetro é a chave da navegação. Você precisa descobri-lo.
+        # Dica: Use as ferramentas de desenvolvedor do navegador (F12), vá para a aba "Rede" (Network),
+        # clique no link "Matrícula Extraordinária" no site e observe o "Payload" ou "Form Data" da requisição POST.
         jscook_action_param = "COLE_O_VALOR_CAPTURADO_AQUI"
 
         if "COLE_O_VALOR" in jscook_action_param:
@@ -314,7 +318,9 @@ def localizar_linha_disciplina(driver: webdriver.Chrome) -> Optional[dict]:
     
     tds = linha_alvo.find_elements(By.TAG_NAME, "td")
     
-
+    # TODO: Verifique o número da coluna que contém as vagas.
+    # Dica: Conte as colunas na tabela de resultados do SIGAA, começando do 0.
+    # A coluna "Vagas Remanescentes" pode não ser a de índice 7 no seu SIGAA.
     INDICE_COLUNA_VAGAS = 7
     
     if len(tds) < INDICE_COLUNA_VAGAS + 1:
@@ -328,6 +334,9 @@ def localizar_linha_disciplina(driver: webdriver.Chrome) -> Optional[dict]:
     vagas = extrai_int(tds[INDICE_COLUNA_VAGAS].text)
     
     try:
+        # TODO: Verifique o atributo 'title' do ícone de matrícula.
+        # Dica: Inspecione o elemento do ícone verde para se matricular
+        # e encontre o valor exato do atributo 'title'.
         texto_title_botao = "Selecionar turma"
         btn_matricular = linha_alvo.find_element(By.XPATH, f".//a[@title='{texto_title_botao}']")
     except NoSuchElementException:
@@ -509,3 +518,4 @@ Objetivo: Este script serve como **exercício educativo**.
 ⚠ NÃO compartilhe suas credenciais pessoais. Use apenas para aprendizado e testes.
 
 """
+
