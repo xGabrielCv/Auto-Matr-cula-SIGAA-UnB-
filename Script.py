@@ -107,10 +107,6 @@ DRY_RUN = True
 # caso não encontre vagas no ciclo atual.
 INTERVALO_POLL = 40
 
-# ==================================================================
-# ============== FIM DO PAINEL DE CONTROLE =======================
-# ==================================================================
-
 """
 ⚠ ATENÇÃO ⚠
 
@@ -123,20 +119,26 @@ Objetivo: Este script serve como **exercício educativo**.
 ⚠ NÃO compartilhe suas credenciais pessoais. Use apenas para aprendizado e testes.
 """
 
-# --- Configurações Técnicas (REQUER ADAPTAÇÃO) ---
-URL_LOGIN = "https://autenticacao.sua-universidade.br/sso-server/login?service=https://sig.sua-universidade.br/sigaa/login/cas"
-URL_PORTAL_DISCENTE = "https://sig.sua-universidade.br/sigaa/portais/discente/discente.jsf"
-URL_MATRICULA_EXTRAORDINARIA = "https://sig.sua-universidade.br/sigaa/graduacao/matricula/extraordinaria/matricula_extraordinaria.jsf"
+# ==================================================================
+# ============== FIM DO PAINEL DE CONTROLE =======================
+# ==================================================================
+
+
+# --- Configurações Técnicas  ---
+URL_LOGIN = "https://autenticacao.sua-universidade.edu.br/sso-server/login?service=https://sig.sua-universidade.edu.br/sigaa/login/cas"
+URL_PORTAL_DISCENTE = "https://sig.sua-universidade.edu.br/sigaa/portais/discente/discente.jsf"
+URL_MATRICULA_EXTRAORDINARIA = "https://sig.sua-universidade.edu.br/sigaa/graduacao/matricula/extraordinaria/matricula_extraordinaria.jsf"
 
 CONFIG = {
-    "DEFAULT_WAIT": 20,
-    "MAX_TENTATIVAS_LOGIN": 3,
-    "LIMITE_ALERTAS": 5,
-    "PERIODO_LIMITACAO": 300,
+    "DEFAULT_WAIT": 20,      # Timeout para elementos da página
+    "MAX_TENTATIVAS_LOGIN": 3,   # Tentativas de reiniciar em caso de erro grave
+    "LIMITE_ALERTAS": 5,         # Limite de notificações e alarmes
+    "PERIODO_LIMITACAO": 300,    # Janela de tempo do limite (em segundos)
 }
 
-if "seu_usuario_aqui" in SIGAA_USER or "sua_senha_aqui" in SIGAA_PASS or "00000000000" in SIGAA_CPF:
-    print("[ERRO] Suas informações pessoais não foram preenchidas. Edite o 'Painel de Controle' no topo do script.")
+# Verificação reforçada para garantir que os dados de exemplo foram alterados.
+if any(placeholder in v for placeholder in ["seu_", "aqui", "dd/mm/aaaa", "XXX0000"] for v in [SIGAA_USER, SIGAA_PASS, SIGAA_CPF, SIGAA_NASCIMENTO, CODIGO_DISCIPLINA]):
+    print("[ERRO] Suas informações pessoais e/ou da disciplina não foram preenchidas. Edite o 'Painel de Controle'.")
     sys.exit(1)
 
 # ========================= LOGGING ==============================
@@ -231,11 +233,11 @@ def navegar_para_busca_turmas(driver: webdriver.Chrome) -> None:
         session_id = driver.find_element(By.NAME, "id").get_attribute("value")
         cookies = {c['name']: c['value'] for c in driver.get_cookies()}
         
-        # ALTERACAO 2: O parâmetro 'jscook_action' é a chave da navegação.
-        jscook_action_param = "COLE_AQUI_O_VALOR_DO_JSCOOK_ACTION_CAPTurado"
+        jscook_action_param = "COLE_O_VALOR_CAPTURADO_AQUI"
 
-        if "COLE_AQUI" in jscook_action_param:
-            raise ValueError("O parâmetro 'jscook_action' não foi preenchido.")
+        if "COLE_O_VALOR" in jscook_action_param:
+            log.error("O parâmetro 'jscook_action_param' na função 'navegar_para_busca_turmas' não foi preenchido.")
+            raise ValueError("Parâmetro de navegação essencial não configurado.")
 
         form_data = {
             'menu:form_menu_discente': 'menu:form_menu_discente',
@@ -255,33 +257,40 @@ def navegar_para_busca_turmas(driver: webdriver.Chrome) -> None:
         log.error("A navegação por requisição de rede falhou: %s", e)
         raise e
 
-def preencher_filtros_busca(driver: webdriver.Chrome) -> None:
+def preencher_filtros_busca(driver: webdriver.Chrome) -> bool:
     log.info("Preenchendo filtros da busca com o código: %s", CODIGO_DISCIPLINA)
     wait = WebDriverWait(driver, CONFIG["DEFAULT_WAIT"])
     human_delay()
-    wait.until(EC.element_to_be_clickable((By.ID, "form:checkCodigo"))).click()
+    checkbox_codigo = wait.until(EC.element_to_be_clickable((By.ID, "form:checkCodigo")))
+    click_js(driver, checkbox_codigo)
     campo_codigo = wait.until(EC.presence_of_element_located((By.ID, "form:txtCodigo")))
     campo_codigo.clear()
     campo_codigo.send_keys(CODIGO_DISCIPLINA)
     log.info("Clicando em 'Buscar'...")
     human_delay()
     btn_buscar = wait.until(EC.element_to_be_clickable((By.ID, "form:buscar")))
-    btn_buscar.click()
+    click_js(driver, btn_buscar)
+    
     try:
         WebDriverWait(driver, 3).until(EC.alert_is_present())
         alert = driver.switch_to.alert
         log.warning("Alerta inesperado detectado após a busca: '%s'. Aceitando...", alert.text)
         alert.accept()
     except TimeoutException:
-        log.info("Nenhum alerta inesperado após a busca.")
         pass
-    wait.until(EC.presence_of_element_located((By.ID, "lista-turmas-extra")))
-    log.info("Tabela de resultados carregada.")
+
+    try:
+        wait_tabela = WebDriverWait(driver, 3)
+        wait_tabela.until(EC.presence_of_element_located((By.ID, "lista-turmas-extra")))
+        log.info("Tabela de resultados encontrada.")
+        return True
+    except TimeoutException:
+        log.warning("Tabela de resultados ('lista-turmas-extra') não foi encontrada após 3s. Assumindo busca vazia.")
+        return False
 
 def localizar_linha_disciplina(driver: webdriver.Chrome) -> Optional[dict]:
-    wait = WebDriverWait(driver, CONFIG["DEFAULT_WAIT"])
     log.info("Procurando pela disciplina %s - Turma %s...", CODIGO_DISCIPLINA, TURMA)
-    tabela = wait.until(EC.presence_of_element_located((By.ID, "lista-turmas-extra")))
+    tabela = driver.find_element(By.ID, "lista-turmas-extra")
     linhas = tabela.find_elements(By.XPATH, ".//tr")
     disciplina_encontrada = False
     linha_alvo = None
@@ -302,20 +311,28 @@ def localizar_linha_disciplina(driver: webdriver.Chrome) -> Optional[dict]:
         except StaleElementReferenceException:
             continue
     if not linha_alvo: return None
+    
     tds = linha_alvo.find_elements(By.TAG_NAME, "td")
     
-    # ALTERACAO 3: A ordem e o número de colunas pode variar.
-    INDICE_COLUNA_VAGAS = 7 # TODO: 
+
+    INDICE_COLUNA_VAGAS = 7
     
-    if len(tds) < INDICE_COLUNA_VAGAS + 1: return None
+    if len(tds) < INDICE_COLUNA_VAGAS + 1:
+        log.error(f"A linha da turma encontrada não possui colunas suficientes (Índice de vagas: {INDICE_COLUNA_VAGAS}). Verifique o HTML.")
+        return None
+    
     def extrai_int(s: str) -> int:
         num = "".join(ch for ch in s if ch.isdigit())
         return int(num) if num else 0
+
     vagas = extrai_int(tds[INDICE_COLUNA_VAGAS].text)
+    
     try:
-        btn_matricular = linha_alvo.find_element(By.XPATH, ".//a[@title='SEU_TEXTO_DE_SELECAO_AQUI']") # TODO:
+        texto_title_botao = "Selecionar turma"
+        btn_matricular = linha_alvo.find_element(By.XPATH, f".//a[@title='{texto_title_botao}']")
     except NoSuchElementException:
         btn_matricular = None
+        
     return {"vagas_disponiveis": vagas, "elemento_matricular": btn_matricular}
 
 def efetivar_matricula(driver: webdriver.Chrome, btn) -> bool:
@@ -344,6 +361,7 @@ def efetivar_matricula(driver: webdriver.Chrome, btn) -> bool:
                 campo_cpf.send_keys(SIGAA_CPF)
             except NoSuchElementException:
                 log.warning("Nenhum campo de confirmação (Data ou CPF) foi encontrado.")
+        
         try:
             log.info("Preenchendo a senha de confirmação...")
             human_delay(0.5, 1.5)
@@ -352,6 +370,7 @@ def efetivar_matricula(driver: webdriver.Chrome, btn) -> bool:
         except NoSuchElementException:
             log.error("Campo de senha de confirmação não encontrado. Abortando matrícula.")
             return False
+
         if DRY_RUN:
             log.info("DRY_RUN ativo — matrícula NÃO será confirmada.")
             return True
@@ -388,7 +407,7 @@ def efetivar_matricula(driver: webdriver.Chrome, btn) -> bool:
 # ======================== LOOP PRINCIPAL ========================
 def main() -> None:
     tentativas_login = 0
-    driver = None
+    driver: Optional[webdriver.Chrome] = None
     while True:
         try:
             if driver is None:
@@ -396,13 +415,32 @@ def main() -> None:
                 login(driver)
                 navegar_para_busca_turmas(driver)
             
-            preencher_filtros_busca(driver)
+            tabela_encontrada = preencher_filtros_busca(driver)
+
+            if not tabela_encontrada:
+                log.info("A busca não retornou uma tabela de resultados. Tentando novamente em %ss…", INTERVALO_POLL)
+                time.sleep(INTERVALO_POLL)
+                driver.refresh()
+                try:
+                    log.info("Aguardando página de busca recarregar...")
+                    WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.ID, "form:buscar")))
+                    log.info("Página recarregada.")
+                except TimeoutException:
+                    log.warning("Página de busca não recarregou a tempo. O ciclo continuará, mas pode falhar.")
+                continue
+
             dados = localizar_linha_disciplina(driver)
 
             if not dados:
                 log.info("Disciplina/turma não encontrada na tabela. Atualizando a busca em %ss…", INTERVALO_POLL)
                 time.sleep(INTERVALO_POLL)
                 driver.refresh()
+                try:
+                    log.info("Aguardando página de busca recarregar...")
+                    WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.ID, "form:buscar")))
+                    log.info("Página recarregada.")
+                except TimeoutException:
+                    log.warning("Página de busca não recarregou a tempo. O ciclo continuará, mas pode falhar.")
                 continue
 
             vagas = dados["vagas_disponiveis"]
@@ -469,4 +507,5 @@ de colunas e XPaths de botões, foram deixados como placeholders.
 Objetivo: Este script serve como **exercício educativo**. 
 
 ⚠ NÃO compartilhe suas credenciais pessoais. Use apenas para aprendizado e testes.
+
 """
